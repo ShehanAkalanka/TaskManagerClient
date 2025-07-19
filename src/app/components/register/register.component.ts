@@ -32,6 +32,7 @@ import { AuthService } from '../../services/auth.service';
 export class RegisterComponent {
   registerForm: FormGroup;
   hidePassword = true;
+  hideConfirmPassword = true;
   isLoading = false;
 
   constructor(
@@ -43,15 +44,24 @@ export class RegisterComponent {
     this.registerForm = this.fb.group({
       username: ['', [Validators.required, Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
-      password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(100)]]
+      password: ['', [
+        Validators.required, 
+        Validators.minLength(8), 
+        Validators.maxLength(100),
+        Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/)
+      ]],
+      confirmPassword: ['', [Validators.required]]
     });
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid) {
+    if (this.registerForm.valid && this.passwordsMatch()) {
       this.isLoading = true;
       
-      this.authService.register(this.registerForm.value).subscribe({
+      // Remove confirmPassword before sending to API
+      const { confirmPassword, ...registerData } = this.registerForm.value;
+      
+      this.authService.register(registerData).subscribe({
         next: (response) => {
           this.isLoading = false;
           this.snackBar.open('Registration successful! Please sign in.', 'Close', {
@@ -73,5 +83,11 @@ export class RegisterComponent {
         }
       });
     }
+  }
+
+  passwordsMatch(): boolean {
+    const password = this.registerForm.get('password')?.value;
+    const confirmPassword = this.registerForm.get('confirmPassword')?.value;
+    return password === confirmPassword;
   }
 }
